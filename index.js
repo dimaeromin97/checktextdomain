@@ -1,8 +1,22 @@
 const path = require( 'path' );
 const fs = require( 'fs' );
+const glob = require( 'glob' );
 
 
 module.exports = {
+	findFiles( cwd, patterns = '**/*.php' ) {
+		const options = {
+			absolute: true,
+			cwd
+		};
+
+		return glob.sync( patterns, options );
+	},
+
+	getFileContent( filepath ) {
+		return fs.readFileSync( filepath, 'utf-8' );
+	},
+
 	run( dir ) {
 		const options = {
 			text_domain: 'text-domain',
@@ -23,13 +37,22 @@ module.exports = {
 				'_n_noop:1,2,3d',
 				'_nx_noop:1,2,3c,4d'
 			],
+			files: this.findFiles( dir ),
 			correct_domain: false
 		};
 
+		options.text_domain = ( options.text_domain instanceof Array ) ? options.text_domain : [options.text_domain];
+	
+		//correct_domain can only be used if one domain is specified:
+		options.correct_domain = options.correct_domain && ( options.text_domain.length === 1 ); 
+
 		//Init the variables
+		var errors = [];
 		var functions = []; //Array of gettext functions 
 		var func_domain = {}; //Map of gettext function => ordinal number of domain argument
 		var patt = new RegExp("([0-9]+)d", "i");
+		var all_errors = {};
+		var error_num = 0;
 
 		options.keywords.forEach( ( keyword ) => {
 			var parts = keyword.split(':');
@@ -41,10 +64,10 @@ module.exports = {
 				const args = parts[1],
 					arg_parts = args.split(',');
 				
-				for( var j=0; j < arg_parts.length; j++ ){
+				for( var j=0; j < arg_parts.length; j++ ) {
 
 					//check for domain identifier
-					if( patt.test(arg_parts[j]) ){
+					if( patt.test(arg_parts[j]) ) {
 						argument = parseInt( patt.exec( arg_parts[j] ), 10 );
 						break;
 					}
@@ -63,19 +86,16 @@ module.exports = {
 		} );
 
 
-		this.files.forEach( function(f) {
-
+		options.files.forEach( ( filepath ) => {
 			var modified_content = "";
 			
 			//Read file, if it exists
-			var filepath = f.src.join(options.cwd || '', f.src);
-			if ( !grunt.file.exists(filepath ) ) {
-				grunt.log.warn('Source file "' + filepath + '" not found.');
+			if ( ! fs.existsSync( filepath ) ) {
 				return;
 			}
 		
 			//Get tokens
-			var tokens = checktextdomain.token_get_all( grunt.file.read( filepath ) );
+			var tokens = this.token_get_all( this.getFileContent( filepath ) );
 		
 			//Init gettext_func - the current gettext function being inspected
 			var gettext_func = {
@@ -87,14 +107,14 @@ module.exports = {
 
 			var parens_balance = 0; //Used to track parenthesis
 
-			for( var i=0; i<tokens.length; i++ ){
+			for( var i=0; i<tokens.length; i++ ) {
 
 				var token = tokens[i][0], text = tokens[i][1], line = tokens[i][2];
 				
 				var content = ( 'undefined' !== typeof tokens[i][1] ? tokens[i][1] : tokens[i][0] );
 				
 				//Look for T_STRING (function call )
-				if( token === 306 && functions.indexOf( text ) > -1 ){
+				if( token === 306 && functions.indexOf( text ) > -1 ) {
 
 					gettext_func ={
 						name: text,
@@ -106,45 +126,45 @@ module.exports = {
 					parens_balance = 0;
 					
 				//Check for T_CONSTANT_ENCAPSED_STRING - and that we are in the text-domain argument
-				}else if( token === 314 && gettext_func.line && func_domain[gettext_func.name] === gettext_func.argument ){
+				} else if( token === 314 && gettext_func.line && func_domain[gettext_func.name] === gettext_func.argument ) {
 		
-					if( gettext_func.argument > 0 ){
+					if( gettext_func.argument > 0 ) {
 						gettext_func.domain = text.substr(1,text.length -2);//get rid of quotes from beginning & end
 						
 						//Corect content
-						if( options.correct_domain && gettext_func.domain !== options.text_domain[0] ){
+						if( options.correct_domain && gettext_func.domain !== options.text_domain[0] ) {
 							content = "'"+options.text_domain[0]+"'";
 						}
 					}
 					
 				//Check for variable - and that we are in the text-domain argument
-				}else if( token === 308 && gettext_func.line && func_domain[gettext_func.name] === gettext_func.argument ){
+				} else if( token === 308 && gettext_func.line && func_domain[gettext_func.name] === gettext_func.argument ) {
 		
-					if( gettext_func.argument > 0 ){
+					if( gettext_func.argument > 0 ) {
 						gettext_func.domain = -1; //We don't know what the domain is )its a variable).
 						
 						//Corect content
-						if( options.report_variable_domain && options.correct_domain ){
+						if( options.report_variable_domain && options.correct_domain ) {
 							content = "'"+options.text_domain[0]+"'";
 						}
 					}
 					
 				//Check for comma seperating arguments. Only interested in 'top level' where parens_balance == 1
-				}else if ( token === ',' && parens_balance === 1 && gettext_func.line ){
+				} else if ( token === ',' && parens_balance === 1 && gettext_func.line ) {
 					gettext_func.argument++;
 		
 				//If we are an opening bracket, increment parens_balance
-				}else if( '(' === token && gettext_func.line  ){
+				} else if( '(' === token && gettext_func.line  ) {
 					
 					//If in gettext function and found opening parenthesis, we are at first argument
-					if( gettext_func.argument === 0 ){
+					if( gettext_func.argument === 0 ) {
 						gettext_func.argument = 1;
 					}
 					
 					parens_balance++;
 		
 				//If in gettext function and found closing parenthesis,
-				}else if( ')' === token && gettext_func.line ){
+				} else if( ')' === token && gettext_func.line ) {
 					parens_balance--;
 
 					//If parenthesis match we have parsed all the function's arguments. Time to tally.
@@ -152,18 +172,18 @@ module.exports = {
 		
 						var error_type = false;
 						
-						if( ( options.report_variable_domain && gettext_func.domain === -1 ) ){
+						if( ( options.report_variable_domain && gettext_func.domain === -1 ) ) {
 							error_type = 'variable-domain'; 
 								
-						}else if( options.report_missing && !gettext_func.domain ){ 
+						} else if( options.report_missing && !gettext_func.domain ) { 
 							error_type = 'missing-domain';
 							
-						}else if( gettext_func.domain && gettext_func.domain !== -1 && options.text_domain.indexOf( gettext_func.domain ) === -1 ) {
+						} else if( gettext_func.domain && gettext_func.domain !== -1 && options.text_domain.indexOf( gettext_func.domain ) === -1 ) {
 							error_type = 'incorrect-domain';
 							
 						}
 						
-						if( error_type ){
+						if( error_type ) {
 							errors.push( gettext_func );
 						}
 		
@@ -183,35 +203,9 @@ module.exports = {
 			}
 			
 			//Output errors
-			if( errors.length > 0 ){
-
-				console.log( "\n" + chalk.bold.underline(f.src));
-
-				var rows = [],error_line,func,message;
-				for( i = 0; i < errors.length; i++ ){
-
-					error_line = chalk.yellow(grunt.template.process('[L<%= line %>]', {data: errors[i]}) );
-					func = chalk.cyan(errors[i].name);
-				
-					if(  !errors[i].domain ) {
-						message =  chalk.red( 'Missing text domain' );
-					
-					}else if(  errors[i].domain === -1 ) {
-						message =  chalk.red( 'Variable used in domain argument' );
-						
-					}else{
-						message =  chalk.red( grunt.template.process('Incorrect text domain used ("<%= domain %>")', {data: errors[i]}) );
-					}
-				
-					rows.push( [ error_line, func, message ] );
-					error_num++;
-				}
-				
-				console.log( table(rows) );
-				
-				if( options.correct_domain ){
-					grunt.file.write( filepath, modified_content );
-					console.log( chalk.bold( filepath + " corrected." ) );
+			if( errors.length > 0 ) {
+				if( options.correct_domain ) {
+					fs.writeFileSync( filepath, modified_content );
 				}
 			}
 			
@@ -219,26 +213,11 @@ module.exports = {
 			
 			//Reset errors
 			errors = [];
-	    });
+		});
 
-		var tokens = this.token_get_all( grunt.file.read( filepath ) );
 	},
 
 	token_get_all( source ) {
-		// Split given source into PHP tokens
-		// + original by: Marco Marchiò
-		// + improved by: Brett Zamir (http://brett-zamir.me)
-		// - depends on: token_name
-		// % note 1: Token numbers depend on the PHP version
-		// % note 2: token_name is only necessary for a non-standard php.js-specific use of this function;
-		// % note 2: if you define an object on this.php_js.phpParser (where "this" is the scope of the
-		// % note 2: token_get_all function (either a namespaced php.js object or the window object)),
-		// % note 2: this function will call that object's methods if they have the same names as the tokens,
-		// % note 2: passing them the string, line number, and token number (in that order)
-		// * example 1: token_get_all('/'+'* comment *'+'/');
-		// * returns 1: [[310, '/* comment */', 1]]
-
-		// Token to number conversion
 		var num,
 			nextch,
 			word,
@@ -512,7 +491,7 @@ module.exports = {
 				"heredoc": tokens.T_ENCAPSED_AND_WHITESPACE
 			},
 			//Characters that are emitted as tokens without a code
-			singleTokenChars = ";(){}[],~@`=+/-*.$|^&<>%!?:\"'\\",
+			singleTokenChars = ";() {}[],~@`=+/-*.$|^&<>%!?:\"'\\",
 			//Buffer type. Start an html buffer immediatelly.
 			bufferType = "html",
 			//Buffer content
@@ -592,9 +571,9 @@ module.exports = {
 				emitBuffer();
 				
 				//If limit is not found, set i to the position of the end of the buffered characters
-				if(pos === -1){
+				if(pos === -1) {
 					i = i + buffer.length;
-				}else{
+				} else{
 					i = pos + limit.length - 1;
 				}
 			},
@@ -931,6 +910,7 @@ module.exports = {
 		} else {
 			splitString();
 		}
+
 		return ret;
 	}
 }

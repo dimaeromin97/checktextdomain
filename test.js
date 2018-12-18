@@ -1,3 +1,5 @@
-const checktextdomain = require('./checktextdomain.js');
+const checktextdomain = require('./');
 
-checktextdomain.run( './sushico/' );
+const test = checktextdomain.run( './test/' );
+
+console.log("test: ", test)
