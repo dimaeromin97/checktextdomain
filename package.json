@@ -1,5 +1,5 @@
 {
-	"name": "node-node-checktextdomain",
+	"name": "node-checktextdomain",
 	"version": "0.0.1",
 	"description": "Checks and corrects incorrect gettext functions and text domains.",
 	"main": "index.js",
@@ -17,9 +17,11 @@
 	"license": "ISC",
 	"homepage": "https://github.com/dimaeromin97/node-checktextdomain#readme",
 	"keywords": [
+		"localization",
+		"translation",
 		"text-domain",
-		"i18n",
+		"wordpress",
 		"gettext",
-		"wordpress"
+		"i18n"
 	]
 }
