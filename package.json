@@ -1,27 +1,34 @@
 {
-	"name": "node-checktextdomain",
-	"version": "0.0.1",
-	"description": "Checks and corrects incorrect gettext functions and text domains.",
-	"main": "index.js",
-	"dependencies": {
-		"glob": "^7.1.3"
-	},
-	"devDependencies": {},
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/dimaeromin97/node-checktextdomain.git"
-	},
-	"license": "ISC",
-	"homepage": "https://github.com/dimaeromin97/node-checktextdomain#readme",
-	"keywords": [
-		"localization",
-		"translation",
-		"text-domain",
-		"wordpress",
-		"gettext",
-		"i18n"
-	]
+  "name": "node-checktextdomain",
+  "version": "0.0.2",
+  "description": "Checks and corrects incorrect gettext functions and text domains.",
+  "main": "index.js",
+  "dependencies": {
+    "glob": "^7.1.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimaeromin97/node-checktextdomain.git"
+  },
+  "license": "ISC",
+  "homepage": "https://github.com/dimaeromin97/node-checktextdomain#readme",
+  "keywords": [
+    "localization",
+    "translation",
+    "text-domain",
+    "wordpress",
+    "gettext",
+    "i18n"
+  ],
+  "bugs": {
+    "url": "https://github.com/dimaeromin97/node-checktextdomain/issues"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "author": ""
 }

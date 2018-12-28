@@ -1,3 +1,5 @@
+[![NPM version](https://badge.fury.io/js/node-checktextdomain.svg)](http://badge.fury.io/js/node-checktextdomain) ![](https://img.shields.io/bundlephobia/min/node-checktextdomain.svg) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
+
 # node-checktextdomain
 
 > Checks and corrects incorrect gettext functions and text domains.
